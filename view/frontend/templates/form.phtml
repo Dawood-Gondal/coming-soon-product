@@ -1,0 +1,108 @@
+<?php
+/**
+ * @category    M2Commerce Enterprise
+ * @package     M2Commerce_ComingSoonProduct
+ * @copyright   Copyright (c) 2023 M2Commerce Enterprise
+ * @author      dawoodgondaldev@gmail.com
+ */
+
+/* @var \Magento\Catalog\Block\Product\View $block */
+/* @var \M2Commerce\ComingSoonProduct\Helper\LabelHelper $labelHelper */
+/* @var \Magento\Framework\Escaper $escaper */
+
+$_helper = $this->helper(Magento\Catalog\Helper\Output::class);
+$_product = $block->getProduct();
+$labelHelper = $this->helper(M2Commerce\ComingSoonProduct\Helper\LabelHelper::class);
+$isLabelEnable = $labelHelper->isEnable();
+$id = $_product->getId();
+$comingSoonDate = $labelHelper->verifyComingSoonDate($_product);
+?>
+
+<?php if (!empty($comingSoonDate)) : ?>
+    <div class="coming-soon">
+        <h3 class="comming-soon-pdp" id="coming-soon-label">
+            <span id="product-coming-soon-label"><?= $block->escapeHtml($labelHelper->getComingSoonLabel($_product)) ?></span>
+        </h3>
+        <p id="launch-msg"></p>
+        <div id="comming-soon-clockdiv">
+            <div class="timer">
+                <span class="days" id="cs-days"></span>
+                <div class="smalltext">Days</div>
+            </div>
+            <div class="timer">
+                <span class="hours" id="cs-hours"></span>
+                <div class="smalltext">Hours</div>
+            </div>
+            <div class="timer">
+                <span class="minutes" id="cs-minutes"></span>
+                <div class="smalltext">Minutes</div>
+            </div>
+            <div class="timer">
+                <span class="seconds" id="cs-seconds"></span>
+                <div class="smalltext">Seconds</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var countDownDate = new Date("<?php echo $comingSoonDate ?>").getTime();
+        if (countDownDate) {
+            var x = setInterval(function () {
+                var now = new Date().getTime(),
+                    distance = countDownDate - now,
+                    days = Math.floor(distance / (1000 * 60 * 60 * 24)),
+                    hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                    minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+                    seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                document.getElementById("cs-days").innerHTML = days;
+                document.getElementById("cs-hours").innerHTML = hours;
+                document.getElementById("cs-minutes").innerHTML = minutes;
+                document.getElementById("cs-seconds").innerHTML = seconds;
+
+                // If the countdown is finished, write some text
+                if (distance < 0) {
+                    clearInterval(x);
+                    document.getElementById("comming-soon-clockdiv").style.visibility = "hidden";
+                    document.getElementById("product-coming-soon-label").innerHTML = "Available now!";
+                    document.getElementById("launch-msg").innerHTML = "Refresh page to shop now.";
+                }
+            }, 1000);
+        }
+    </script>
+<?php else: ?>
+    <div class="product-add-form">
+        <form data-product-sku="<?= $block->escapeHtml($_product->getSku()) ?>"
+              action="<?= $escaper->escapeUrl($block->getSubmitUrl($_product)) ?>" method="post"
+              id="product_addtocart_form"<?php if ($_product->getOptions()) : ?> enctype="multipart/form-data"<?php endif; ?>>
+            <input type="hidden" name="product" value="<?= (int)$_product->getId() ?>"/>
+            <input type="hidden" name="selected_configurable_option" value=""/>
+            <input type="hidden" name="related_product" id="related-products-field" value=""/>
+            <input type="hidden" name="item" value="<?= (int)$block->getRequest()->getParam('id') ?>"/>
+            <?= $block->getBlockHtml('formkey') ?>
+            <?= $block->getChildHtml('form_top') ?>
+            <?php if (!$block->hasOptions()) : ?>
+                <?= $block->getChildHtml('product_info_form_content') ?>
+            <?php else : ?>
+                <?php if ($_product->isSaleable() && $block->getOptionsContainer() == 'container1') : ?>
+                    <?= $block->getChildChildHtml('options_container') ?>
+                <?php endif; ?>
+            <?php endif; ?>
+
+            <?php if ($_product->isSaleable() && $block->hasOptions() && $block->getOptionsContainer() == 'container2') : ?>
+                <?= $block->getChildChildHtml('options_container') ?>
+            <?php endif; ?>
+            <?= $block->getChildHtml('form_bottom') ?>
+        </form>
+    </div>
+<?php endif; ?>
+
+<script type="text/x-magento-init">
+    {
+        "[data-role=priceBox][data-price-box=product-id-<?= $block->escapeHtml($_product->getId()) ?>]": {
+            "priceBox": {
+                "priceConfig":  <?= $block->getJsonConfig() ?>
+            }
+        }
+    }
+</script>

@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @category    M2Commerce Enterprise
+ * @package     M2Commerce_ComingSoonProduct
+ * @copyright   Copyright (c) 2023 M2Commerce Enterprise
+ * @author      dawoodgondaldev@gmail.com
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+    <!-- Exclude datetime attribute from mass update -->
+    <event name="adminhtml_catalog_product_form_prepare_excluded_field_list">
+        <observer name="m2c.product.excluded.field.list" instance="M2Commerce\ComingSoonProduct\Observer\UpdateExcludedFieldList"/>
+    </event>
+</config>

@@ -1,0 +1,179 @@
+<?php
+/**
+ * @category    M2Commerce Enterprise
+ * @package     M2Commerce_ComingSoonProduct
+ * @copyright   Copyright (c) 2023 M2Commerce Enterprise
+ * @author      dawoodgondaldev@gmail.com
+ */
+
+use Magento\Catalog\Block\Product\ReviewRendererInterface;
+use Magento\Framework\App\ActionInterface;
+
+/* @var \Magento\Catalog\Block\Product\ListProduct $block */
+/* @var \Magento\Framework\Escaper $escaper */
+/* @var \Magento\Catalog\Helper\Output $_helper */
+/* @var \M2Commerce\ComingSoonProduct\Helper\LabelHelper $labelHelper */
+/* @var \Magento\Framework\View\Helper\SecureHtmlRenderer $secureRenderer */
+
+$_productCollection = $block->getLoadedProductCollection();
+$_helper = $block->getData('outputHelper');
+$labelHelper = $this->helper(\M2Commerce\ComingSoonProduct\Helper\LabelHelper::class);
+$isLabelEnable = $labelHelper->isEnable();
+?>
+
+<?php if (!$_productCollection->count()): ?>
+    <div class="message info empty">
+        <div><?= $escaper->escapeHtml(__('We can\'t find products matching the selection.')) ?></div>
+    </div>
+<?php else: ?>
+    <?= $block->getToolbarHtml() ?>
+    <?= $block->getAdditionalHtml() ?>
+    <?php
+    if ($block->getMode() === 'grid') {
+        $viewMode = 'grid';
+        $imageDisplayArea = 'category_page_grid';
+        $showDescription = false;
+        $templateType = ReviewRendererInterface::SHORT_VIEW;
+    } else {
+        $viewMode = 'list';
+        $imageDisplayArea = 'category_page_list';
+        $showDescription = true;
+        $templateType = ReviewRendererInterface::FULL_VIEW;
+    }
+    /**
+     * Position for actions regarding image size changing in vde if needed
+     */
+    $pos = $block->getPositioned();
+    ?>
+    <div class="products wrapper <?= $viewMode ?> products-<?= $viewMode ?>">
+        <ol class="products list items product-items">
+            <?php /** @var $_product \Magento\Catalog\Model\Product */ ?>
+            <?php foreach ($_productCollection as $_product): ?>
+                <li class="item product product-item">
+                    <div class="product-item-info"
+                         id="product-item-info_<?= $_product->getId() ?>"
+                         data-container="product-<?= $viewMode ?>">
+                        <?php
+                        $productImage = $block->getImage($_product, $imageDisplayArea);
+                        if ($pos != null) {
+                            $position = 'left:' . $productImage->getWidth() . 'px;'
+                                . 'top:' . $productImage->getHeight() . 'px;';
+                        }
+                        ?>
+                        <?php // Product Image ?>
+                        <a href="<?= $escaper->escapeUrl($_product->getProductUrl()) ?>"
+                           class="product photo product-item-photo"
+                           tabindex="-1">
+                            <?= $productImage->toHtml() ?>
+                        </a>
+                        <div class="product details product-item-details">
+                            <?php $_productNameStripped = $block->stripTags($_product->getName(), null, true); ?>
+                            <strong class="product name product-item-name">
+                                <a class="product-item-link"
+                                   href="<?= $escaper->escapeUrl($_product->getProductUrl()) ?>">
+                                    <?= $_helper->productAttribute($_product, $_product->getName(), 'name')?>
+                                </a>
+                            </strong>
+                            <?= $block->getReviewsSummaryHtml($_product, $templateType) ?>
+                            <?= $block->getProductPrice($_product) ?>
+
+                            <!-- Verifying product is coming soon or not for swatches -->
+                            <?php $comingSoonDate = $labelHelper->verifyComingSoonDate($_product); ?>
+                            <?php if (!$isLabelEnable || empty($comingSoonDate)): ?>
+                                <?= $block->getProductDetailsHtml($_product); ?>
+                            <?php endif; ?>
+
+                            <div class="product-item-inner">
+                                <div class="product actions product-item-actions">
+                                    <div class="actions-primary">
+                                        <?php if ($isLabelEnable && !empty($comingSoonDate)): ?>
+                                            <div class="comming-soon-wrapper">
+                                                <?= $block->escapeHtml($labelHelper->getComingSoonLabel($_product)) ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <?php if ($_product->isSaleable()):?>
+                                                <?php $postParams = $block->getAddToCartPostParams($_product); ?>
+                                                <form data-role="tocart-form"
+                                                      data-product-sku="<?= $escaper->escapeHtml($_product->getSku()) ?>"
+                                                      action="<?= $escaper->escapeUrl($postParams['action']) ?>"
+                                                      data-mage-init='{"catalogAddToCart": {}}'
+                                                      method="post">
+                                                    <?php $options = $block->getData('viewModel')->getOptionsData($_product); ?>
+                                                    <?php foreach ($options as $optionItem): ?>
+                                                        <input type="hidden"
+                                                               name="<?= $escaper->escapeHtml($optionItem['name']) ?>"
+                                                               value="<?= $escaper->escapeHtml($optionItem['value']) ?>">
+                                                    <?php endforeach; ?>
+                                                    <input type="hidden"
+                                                           name="product"
+                                                           value="<?= $postParams['data']['product'] ?>">
+                                                    <input type="hidden"
+                                                           name="<?= ActionInterface::PARAM_NAME_URL_ENCODED ?>"
+                                                           value="<?=
+                                                           $postParams['data'][ActionInterface::PARAM_NAME_URL_ENCODED]
+                                                           ?>">
+                                                    <?= $block->getBlockHtml('formkey') ?>
+                                                    <button type="submit"
+                                                            title="<?= $escaper->escapeHtmlAttr(__('Add to Cart')) ?>"
+                                                            class="action tocart primary"
+                                                            disabled>
+                                                        <span><?= $escaper->escapeHtml(__('Add to Cart')) ?></span>
+                                                    </button>
+                                                </form>
+                                            <?php else:?>
+                                                <?php if ($_product->isAvailable()):?>
+                                                    <div class="stock available">
+                                                        <span><?= $escaper->escapeHtml(__('In stock')) ?></span></div>
+                                                <?php else:?>
+                                                    <div class="stock unavailable">
+                                                        <span><?= $escaper->escapeHtml(__('Out of stock')) ?></span></div>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?= ($pos && strpos($pos, $viewMode . '-primary')) ?
+                                        $secureRenderer->renderStyleAsTag(
+                                            $position,
+                                            'product-item-info_' . $_product->getId() . ' div.actions-primary'
+                                        ) : '' ?>
+
+                                    <?php if (!$isLabelEnable || empty($comingSoonDate)): ?>
+                                        <div data-role="add-to-links" class="actions-secondary">
+                                            <?php if ($addToBlock = $block->getChildBlock('addto')): ?>
+                                                <?= $addToBlock->setProduct($_product)->getChildHtml() ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <?= ($pos && strpos($pos, $viewMode . '-secondary')) ?
+                                        $secureRenderer->renderStyleAsTag(
+                                            $position,
+                                            'product-item-info_' . $_product->getId() . ' div.actions-secondary'
+                                        ) : '' ?>
+                                </div>
+                                <?php if ($showDescription): ?>
+                                    <div class="product description product-item-description">
+                                        <?= $_helper->productAttribute(
+                                            $_product,
+                                            $_product->getShortDescription(),
+                                            'short_description'
+                                        ) ?>
+                                        <a href="<?= $escaper->escapeUrl($_product->getProductUrl()) ?>"
+                                           title="<?= $_productNameStripped ?>"
+                                           class="action more"><?= $escaper->escapeHtml(__('Learn More')) ?></a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?= ($pos && strpos($pos, $viewMode . '-actions')) ?
+                        $secureRenderer->renderStyleAsTag(
+                            $position,
+                            'product-item-info_' . $_product->getId() . ' div.product-item-actions'
+                        ) : '' ?>
+                </li>
+            <?php endforeach; ?>
+        </ol>
+    </div>
+    <?= $block->getChildBlock('toolbar')->setIsBottom(true)->toHtml() ?>
+<?php endif; ?>
